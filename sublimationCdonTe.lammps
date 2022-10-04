@@ -1,0 +1,74 @@
+units metal
+processors 2 3 1
+atom_style atomic
+dimension 3
+boundary p p f
+
+log log.subrun-1 append
+
+read_data /users/PJS0245/utl0437/lammps/sublimation/CdonTe2REPUL/CdonTe200ps.dat #change the path to where your substrate with Cd on the top is located
+
+
+pair_style hybrid/overlay bop table linear 90 
+pair_coeff * * bop /users/PJS0245/utl0437/local/bin/lammps-potential/CdTe.bop.table Cd Te Te Cd
+comm_modify cutoff 14.70
+# This reads the table potential we have created, put the table in the same directory
+pair_coeff 3 4 table CdTe_table REPULSIVE 4.9  
+
+
+region bfix block 0 68.33 0 68.33 0 5.2 units box
+group bfix region bfix
+
+region isotherm block 0 68.33 0 68.33 5.25 12.85 units box
+group isotherm region isotherm
+
+region free block 0 68.33 0 68.33 12.9 23.5 units box
+group free region free
+
+region top block 0 68.33 0 68.33 18.7825 23.5 units box
+group top region free
+
+region mobile block 0 68.33 0 68.33 5.25 23.5 units box
+group mobile region mobile
+
+group atomrep type 3 4
+
+#we made window which bottom is at rcut + 1 A above the top surface and width 13 A change it to require value. Makes sure the height is correct
+region sb block 0 69.5 0 69.5 27.0 40 units box
+
+
+group sublime dynamic all region sb every 1
+compute ke sublime ke/atom
+compute pe sublime pe/atom
+
+compute_modify  ke dynamic/dof yes extra/dof 0
+compute_modify  pe dynamic/dof yes extra/dof 0
+
+
+compute	 add mobile temp
+compute_modify	add dynamic/dof yes extra/dof 0
+compute rep atomrep pair table epair 
+compute bopepair all pair bop epair
+compute_modify	rep dynamic/dof yes extra/dof 0
+compute_modify	bopepair dynamic/dof yes extra/dof 0
+
+neighbor 2.0 bin
+neigh_modify delay 0 every 1 check yes
+timestep 0.001
+
+velocity all create 800 219035 dist gaussian
+
+fix 1 bfix setforce 0.0 0.0 0.0
+fix 2 isotherm langevin 800 800 1 652089
+fix 3 mobile nve
+
+thermo_style custom step time atoms temp epair c_bopepair c_rep etotal ke pe
+thermo_modify lost warn flush yes temp add
+thermo 10
+
+#sublimated atoms will be recorded along with MD times and coordinates and velocity and energies. 
+
+dump vapor sublime custom 10 dump.4ML.r2con11.dat id type x y z vx vy vz c_ke c_pe
+
+run 2000000
+write_data CdonTe.2ns.dat

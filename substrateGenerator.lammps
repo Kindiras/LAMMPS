@@ -1,0 +1,90 @@
+# This LAMMPS scripts generates the substrate of Te terminated surface with 12 layers and each layers have 200 atoms
+units metal
+processors 2 3 1
+atom_style atomic
+dimension 3
+boundary p p f
+
+lattice custom 6.83 a1 1.0 0.0 0.0 a2 0.0 1.0 0.0 a3 0.0 0.0 1.0 &
+                basis 0.0 0.0 0.0       basis 0.0 0.5 0.5 &
+                basis 0.5 0.0 0.5       basis 0.5 0.5 0.0 &
+                basis 0.25 0.25 0.25    basis 0.25 0.75 0.75 &
+                basis 0.75 0.25 0.75    basis 0.75 0.75 0.25
+
+region  box block 0 10.0 0 10.0 0 11.7                 
+create_box 4 box
+
+group Cd type 1
+group Te type 2
+region substrate block 0 10.0 0 10.0 0 2.75 units lattice
+
+create_atoms  2 region substrate &
+           basis 1 1 &
+           basis 2 1 &
+           basis 3 1 &
+           basis 4 1 &
+           basis 5 2 &
+           basis 6 2 &
+           basis 7 2 &
+           basis 8 2
+
+#Top layers Te atoms have type 3 and we have another Cd atoms on the top of it with tpe 4
+mass 1 0.11241180E+03
+mass 2 0.12760300E+03
+mass 3 0.12760300E+03
+mass 4 0.11241180E+03
+
+pair_style hybrid/overlay table linear 90 bop
+pair_coeff 3 4 table CdTe_table REPULSIVE 4.9
+pair_coeff * * bop /users/PJS0245/utl0437/local/bin/lammps-potential/CdTe.bop.table Cd Te Te Cd 
+comm_modify cutoff 14.70
+
+region bfix block 0 10.0 0 10.0 0 0.8 units lattice
+group bfix region bfix
+
+region isotherm block 0 10.0 0 10.0 0.8 1.75 units lattice
+group isotherm region isotherm
+
+#region free block 0 10.0 0 10.0 1.8 3.25 units lattice
+#group free region free
+
+region mobile block 0 10.0 0 10.0 0.8 3.25 units lattice
+group mobile region mobile
+
+region top block 0 10.0 0 10.0 2.75 3.25 units lattice
+group top region top
+
+#region sb block 0 10.5 0 10.5 3.162 75 units lattice
+#group sublime dynamic all region sb every 10
+
+set group top type 3 
+compute	 add all temp
+compute_modify	add dynamic/dof yes extra/dof 0
+
+#compute ke sublime ke/atom
+#compute pe sublime pe/atom
+
+#compute_modify  ke dynamic/dof yes extra/dof 0
+#compute_modify  pe dynamic/dof yes extra/dof 0
+
+
+neighbor 2.0 bin
+neigh_modify delay 0 every 1 check yes
+timestep 0.001
+
+velocity all create 800 8232971 dist gaussian  # You can change the temperature and random variable
+
+fix 1 bfix setforce 0.0 0.0 0.0
+fix 2 isotherm langevin 800 800 1 952371
+fix 3 mobile nve
+
+thermo_style custom step time atoms temp epair etotal ke pe
+thermo 10
+
+thermo_modify lost warn flush yes temp add
+
+#AFter 200 ps It will save the structure file with name below
+run 20000
+write_data CdonTe.dat
+
+
