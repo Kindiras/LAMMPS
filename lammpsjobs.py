@@ -36,13 +36,14 @@ script_template = '''#!/bin/bash
 #SBATCH --job-name=JOB_NAME
 #SBATCH --output=TaC.out
 #SBATCH --error=TaC-%j.err
-#SBATCH --time=0-02:00
+##SBATCH --time=0-02:00
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=48
-#SBATCH --cpus-per-task=30
-#SBATCH --mem-per-cpu=2
-#SBATCH --mem=10GB
+##SBATCH --cpus-per-task=30
+##SBATCH --mem-per-cpu=2
+##SBATCH --mem=10GB
 #SBATCH --export=ALL
+#SBATCH --no-requeue
 
 #load modules with
 module load python
