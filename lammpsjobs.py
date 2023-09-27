@@ -1,3 +1,4 @@
+#This will generate the defects and relax the defected structure
 import os
 import shutil
 
